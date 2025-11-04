@@ -6,6 +6,7 @@ import LiveForm from "./components/LiveForm";
 import ImportExcel from "./components/ImportExcel";
 import FilterBar from "./components/FilterBar";
 import ProfileSelector from "./components/ProfileSelector";
+import Link from "next/link";
 import {
   getAllLiveRecords,
   addLiveRecord,
@@ -372,25 +373,46 @@ export default function Home() {
               Import จาก Excel
             </button>
             {records.length > 0 && (
-              <button
-                onClick={handleDeleteAll}
-                className="flex items-center gap-2 rounded-lg border-2 border-red-300 bg-white px-6 py-3 font-semibold text-red-600 transition-colors hover:border-red-400 hover:bg-red-50 dark:border-red-700 dark:bg-zinc-900 dark:text-red-400 dark:hover:border-red-600 dark:hover:bg-red-900/20"
-              >
-                <svg
-                  className="h-5 w-5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
+              <>
+                <Link
+                  href="/summary"
+                  className="flex items-center gap-2 rounded-lg bg-green-600 px-6 py-3 font-semibold text-white transition-colors hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600"
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                  />
-                </svg>
-                ลบข้อมูลทั้งหมด
-              </button>
+                  <svg
+                    className="h-5 w-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                    />
+                  </svg>
+                  สรุปยอด
+                </Link>
+                <button
+                  onClick={handleDeleteAll}
+                  className="flex items-center gap-2 rounded-lg border-2 border-red-300 bg-white px-6 py-3 font-semibold text-red-600 transition-colors hover:border-red-400 hover:bg-red-50 dark:border-red-700 dark:bg-zinc-900 dark:text-red-400 dark:hover:border-red-600 dark:hover:bg-red-900/20"
+                >
+                  <svg
+                    className="h-5 w-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                    />
+                  </svg>
+                  ลบข้อมูลทั้งหมด
+                </button>
+              </>
             )}
           </div>
         </div>

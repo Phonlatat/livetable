@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   formatNumber,
   formatTimeForDisplay,
@@ -7,8 +8,21 @@ import {
   formatDate,
   formatDurationWithRounding,
 } from "../lib/data";
+import DetailModal from "./DetailModal";
 
 export default function LiveTable({ records, onEdit, onDelete, profileId }) {
+  const [selectedRecord, setSelectedRecord] = useState(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
+
+  const handleViewDetail = (record) => {
+    setSelectedRecord(record);
+    setIsDetailOpen(true);
+  };
+
+  const handleCloseDetail = () => {
+    setIsDetailOpen(false);
+    setSelectedRecord(null);
+  };
   if (records.length === 0) {
     return (
       <div className="mt-8 rounded-lg border border-zinc-200 bg-white p-12 text-center dark:border-zinc-800 dark:bg-zinc-900">
@@ -115,14 +129,32 @@ export default function LiveTable({ records, onEdit, onDelete, profileId }) {
                   const durationInfo = formatDurationWithRounding(
                     record.duration
                   );
+                  
+                  // ตรวจสอบว่าการเวลาเกิน 10 ชั่วโมงหรือไม่
+                  const isOver10Hours = (() => {
+                    // Parse duration string (เช่น "10:30", "11:00", "10:58 → 11:00")
+                    const durationStr = durationInfo.display;
+                    // เอาเฉพาะส่วนแรกก่อน "→" ถ้ามี
+                    const timePart = durationStr.split("→")[0].trim();
+                    const match = timePart.match(/^(\d+):(\d+)$/);
+                    if (match) {
+                      const hours = parseInt(match[1], 10);
+                      return hours >= 10;
+                    }
+                    return false;
+                  })();
+                  
+                  let className = "";
+                  if (isOver10Hours) {
+                    className = "text-red-600 dark:text-red-400 font-semibold";
+                  } else if (durationInfo.isRounded) {
+                    className = "text-yellow-600 dark:text-yellow-400 font-semibold";
+                  } else {
+                    className = "text-zinc-900 dark:text-zinc-100";
+                  }
+                  
                   return (
-                    <span
-                      className={
-                        durationInfo.isRounded
-                          ? "text-yellow-600 dark:text-yellow-400 font-semibold"
-                          : "text-zinc-900 dark:text-zinc-100"
-                      }
-                    >
+                    <span className={className}>
                       {durationInfo.display}
                     </span>
                   );
@@ -174,29 +206,24 @@ export default function LiveTable({ records, onEdit, onDelete, profileId }) {
                 )}
               </td>
               <td className="whitespace-nowrap px-2 py-2 text-[11px] sm:px-3 sm:text-sm">
-                <div className="flex flex-col gap-1 sm:flex-row">
-                  <button
-                    onClick={() => onEdit(record)}
-                    className="rounded px-2 py-1 text-[10px] text-blue-600 transition-colors hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20 sm:px-3 sm:text-xs"
-                  >
-                    แก้ไข
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (confirm("คุณต้องการลบข้อมูลนี้หรือไม่?")) {
-                        onDelete(record.id);
-                      }
-                    }}
-                    className="rounded px-2 py-1 text-[10px] text-red-600 transition-colors hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20 sm:px-3 sm:text-xs"
-                  >
-                    ลบ
-                  </button>
-                </div>
+                <button
+                  onClick={() => handleViewDetail(record)}
+                  className="rounded px-2 py-1 text-[10px] text-blue-600 transition-colors hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20 sm:px-3 sm:text-xs"
+                >
+                  ดูรายละเอียด
+                </button>
               </td>
             </tr>
           ))}
         </tbody>
       </table>
+
+      {/* Detail Modal */}
+      <DetailModal
+        isOpen={isDetailOpen}
+        onClose={handleCloseDetail}
+        record={selectedRecord}
+      />
     </div>
   );
 }
