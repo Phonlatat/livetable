@@ -42,8 +42,7 @@ export default function Home() {
   const [filters, setFilters] = useState({
     streamerName: "",
     platform: "",
-    dateFrom: "",
-    dateTo: "",
+    date: "",
     search: "",
   });
 
@@ -89,8 +88,7 @@ export default function Home() {
     setFilters({
       streamerName: "",
       platform: "",
-      dateFrom: "",
-      dateTo: "",
+      date: "",
       search: "",
     });
   }, []);
@@ -126,67 +124,110 @@ export default function Home() {
     setEditingRecord(null);
   };
 
-  const handleImportComplete = () => {
-    loadRecords();
-  };
+  const handleImportComplete = useCallback((importedProfileId = null) => {
+    // ถ้ามี importedProfileId และไม่ตรงกับ currentProfileId ให้เปลี่ยนโปรไฟล์ก่อน
+    if (importedProfileId && importedProfileId !== currentProfileId) {
+      setCurrentProfileId(importedProfileId);
+      // โหลดข้อมูลของโปรไฟล์ที่ import
+      const data = getAllLiveRecords(importedProfileId);
+      const sorted = data.sort((a, b) => {
+        const dateA = a.date ? new Date(a.date) : new Date(0);
+        const dateB = b.date ? new Date(b.date) : new Date(0);
+        return dateA - dateB;
+      });
+      setRecords(sorted);
+    } else {
+      // โหลดข้อมูลใหม่ของโปรไฟล์ปัจจุบัน
+      loadRecords();
+    }
+  }, [currentProfileId, loadRecords]);
 
   // ฟังก์ชันกรองข้อมูล
   const filteredRecords = useMemo(() => {
     if (
       !filters.streamerName &&
       !filters.platform &&
-      !filters.dateFrom &&
-      !filters.dateTo &&
+      !filters.date &&
       !filters.search
     ) {
       return records;
     }
 
     return records.filter((record) => {
-      // กรองตามชื่อผู้ไลฟ์ (trim ทั้งสองฝั่งเพื่อป้องกัน whitespace)
+      // กรองตามชื่อผู้ไลฟ์ (trim และ normalize whitespace)
       if (filters.streamerName) {
-        const recordName = String(record.streamerName || "").trim();
-        const filterName = String(filters.streamerName).trim();
+        const recordName = String(record.streamerName || "").trim().replace(/\s+/g, " ");
+        const filterName = String(filters.streamerName).trim().replace(/\s+/g, " ");
+        // เปรียบเทียบแบบ exact match (case-sensitive) ตามที่แสดงใน dropdown
         if (recordName !== filterName) {
           return false;
         }
       }
 
-      // กรองตาม Platform (trim ทั้งสองฝั่งเพื่อป้องกัน whitespace)
+      // กรองตาม Platform (trim และ normalize whitespace)
       if (filters.platform) {
-        const recordPlatform = String(record.platform || "").trim();
-        const filterPlatform = String(filters.platform).trim();
+        const recordPlatform = String(record.platform || "").trim().replace(/\s+/g, " ");
+        const filterPlatform = String(filters.platform).trim().replace(/\s+/g, " ");
+        // เปรียบเทียบแบบ exact match (case-sensitive) ตามที่แสดงใน dropdown
         if (recordPlatform !== filterPlatform) {
           return false;
         }
       }
 
       // กรองตามวันที่
-      if (filters.dateFrom || filters.dateTo) {
-        const recordDate = record.date ? new Date(record.date) : null;
-        if (!recordDate || isNaN(recordDate.getTime())) {
+      if (filters.date) {
+        // ตรวจสอบว่า record.date มีค่าหรือไม่
+        if (!record.date || record.date === "" || record.date === "-") {
           return false;
         }
 
-        if (filters.dateFrom) {
-          const fromDate = new Date(filters.dateFrom);
-          if (recordDate < fromDate) {
+        // Parse record.date - เก็บเป็น YYYY-MM-DD
+        let recordDateStr = String(record.date).trim();
+        
+        // เนื่องจาก formatDate จะ shift วันที่ไป 1 วัน (เพิ่ม 1 วัน)
+        // ดังนั้นเราต้อง shift วันที่ที่เลือกกลับไป 1 วันก่อนเปรียบเทียบ
+        // หรือเปรียบเทียบ record.date (ที่ถูก shift แล้ว) กับ filter date
+        
+        // Parse filter date (วันที่ที่ผู้ใช้เลือก)
+        const [filterYear, filterMonth, filterDay] = filters.date.split("-").map(Number);
+        const filterDate = new Date(filterYear, filterMonth - 1, filterDay);
+        
+        // ลบ 1 วันจาก filter date เพื่อ match กับ record.date ที่แท้จริง
+        // เพราะ formatDate จะเพิ่ม 1 วันให้แสดงผล
+        filterDate.setDate(filterDate.getDate() - 1);
+        
+        // ถ้าเป็น format YYYY-MM-DD ให้ parse โดยตรง
+        if (/^\d{4}-\d{2}-\d{2}$/.test(recordDateStr)) {
+          const [year, month, day] = recordDateStr.split("-").map(Number);
+          const recordDate = new Date(year, month - 1, day);
+          
+          // เปรียบเทียบเฉพาะ date (ไม่สน time)
+          if (recordDate.getTime() !== filterDate.getTime()) {
             return false;
           }
-        }
+        } else {
+          // ถ้าไม่ใช่ format YYYY-MM-DD ให้ลอง parse เป็น Date
+          const recordDate = new Date(recordDateStr);
+          if (isNaN(recordDate.getTime())) {
+            return false;
+          }
 
-        if (filters.dateTo) {
-          const toDate = new Date(filters.dateTo);
-          toDate.setHours(23, 59, 59, 999); // ถึงสิ้นวัน
-          if (recordDate > toDate) {
+          // Normalize เป็น date only (ไม่สน time และ timezone)
+          const recordYear = recordDate.getFullYear();
+          const recordMonth = recordDate.getMonth();
+          const recordDay = recordDate.getDate();
+          const recordDateOnly = new Date(recordYear, recordMonth, recordDay);
+          
+          // เปรียบเทียบเฉพาะ date (ไม่สน time)
+          if (recordDateOnly.getTime() !== filterDate.getTime()) {
             return false;
           }
         }
       }
 
       // ค้นหาทุกฟิลด์
-      if (filters.search) {
-        const searchLower = filters.search.toLowerCase();
+      if (filters.search && filters.search.trim()) {
+        const searchLower = filters.search.trim().toLowerCase();
         const searchFields = [
           record.streamerName,
           record.platform,
@@ -204,8 +245,11 @@ export default function Home() {
         ];
 
         const found = searchFields.some((field) => {
-          if (!field) return false;
-          return String(field).toLowerCase().includes(searchLower);
+          if (field === null || field === undefined || field === "") {
+            return false;
+          }
+          // แปลงเป็น string และ trim แล้วค้นหา
+          return String(field).trim().toLowerCase().includes(searchLower);
         });
 
         if (!found) {
@@ -404,6 +448,7 @@ export default function Home() {
         {/* Table */}
         {currentProfileId ? (
           <LiveTable
+            key={`table-${currentProfileId}-${filteredRecords.length}-${filters.streamerName || 'all'}-${filters.platform || 'all'}-${filters.date || 'all'}-${filters.search || 'all'}`}
             records={filteredRecords}
             onEdit={handleEdit}
             onDelete={handleDelete}
@@ -429,6 +474,8 @@ export default function Home() {
           isOpen={isImportOpen}
           onClose={() => setIsImportOpen(false)}
           onImportComplete={handleImportComplete}
+          currentProfileId={currentProfileId}
+          onProfileChange={handleProfileChange}
         />
       </main>
     </div>

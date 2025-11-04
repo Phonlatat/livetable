@@ -10,7 +10,13 @@ import {
   formatDate,
 } from "../lib/data";
 
-export default function ImportExcel({ isOpen, onClose, onImportComplete }) {
+export default function ImportExcel({
+  isOpen,
+  onClose,
+  onImportComplete,
+  currentProfileId,
+  onProfileChange,
+}) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState(null);
   const [preview, setPreview] = useState(null);
@@ -23,11 +29,18 @@ export default function ImportExcel({ isOpen, onClose, onImportComplete }) {
     if (isOpen) {
       const allProfiles = getAllProfiles();
       setProfiles(allProfiles);
-      if (allProfiles.length > 0 && !selectedProfileId) {
-        setSelectedProfileId(allProfiles[0].id);
+      // ใช้ currentProfileId เป็นค่าเริ่มต้นเมื่อเปิด modal
+      if (allProfiles.length > 0) {
+        if (currentProfileId && allProfiles.find((p) => p.id === currentProfileId)) {
+          setSelectedProfileId(currentProfileId);
+        } else if (!selectedProfileId) {
+          setSelectedProfileId(allProfiles[0].id);
+        }
       }
+    } else {
+      // เมื่อปิด modal ไม่ reset selectedProfileId เพื่อคงค่าโปรไฟล์ที่เลือกไว้
     }
-  }, [isOpen, selectedProfileId]);
+  }, [isOpen, currentProfileId]);
 
   const handleFileSelect = async (e) => {
     const file = e.target.files[0];
@@ -96,7 +109,13 @@ export default function ImportExcel({ isOpen, onClose, onImportComplete }) {
 
     try {
       importMultipleRecords(preview, profileId);
-      onImportComplete();
+      
+      // อัพเดท currentProfileId ถ้าเปลี่ยนโปรไฟล์
+      if (profileId !== currentProfileId && onProfileChange) {
+        onProfileChange(profileId);
+      }
+      
+      onImportComplete(profileId);
       handleCancel();
       alert(`นำเข้าข้อมูลสำเร็จ ${preview.length} รายการ`);
     } catch (err) {

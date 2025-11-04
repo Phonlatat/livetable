@@ -6,23 +6,30 @@ export default function FilterBar({ records, onFilterChange }) {
   const [filters, setFilters] = useState({
     streamerName: "",
     platform: "",
-    dateFrom: "",
-    dateTo: "",
+    date: "",
     search: "",
   });
 
-  // ดึงรายการ unique สำหรับ dropdown (trim เพื่อป้องกัน whitespace)
+  // ดึงรายการ unique สำหรับ dropdown (trim และ normalize whitespace)
   const uniqueStreamers = [
     ...new Set(
       records
-        .map((r) => (r.streamerName ? String(r.streamerName).trim() : ""))
+        .map((r) => {
+          if (!r.streamerName) return "";
+          // Normalize: trim และลด whitespace หลายตัวเป็น 1 ตัว
+          return String(r.streamerName).trim().replace(/\s+/g, " ");
+        })
         .filter(Boolean)
     ),
   ].sort();
   const uniquePlatforms = [
     ...new Set(
       records
-        .map((r) => (r.platform ? String(r.platform).trim() : ""))
+        .map((r) => {
+          if (!r.platform) return "";
+          // Normalize: trim และลด whitespace หลายตัวเป็น 1 ตัว
+          return String(r.platform).trim().replace(/\s+/g, " ");
+        })
         .filter(Boolean)
     ),
   ].sort();
@@ -46,8 +53,7 @@ export default function FilterBar({ records, onFilterChange }) {
     const resetFilters = {
       streamerName: "",
       platform: "",
-      dateFrom: "",
-      dateTo: "",
+      date: "",
       search: "",
     };
     setFilters(resetFilters);
@@ -72,9 +78,9 @@ export default function FilterBar({ records, onFilterChange }) {
         )}
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
         {/* Search */}
-        <div className="xl:col-span-2">
+        <div className="lg:col-span-2">
           <label className="mb-1 block text-xs font-medium text-zinc-700 dark:text-zinc-300">
             ค้นหา
           </label>
@@ -125,28 +131,15 @@ export default function FilterBar({ records, onFilterChange }) {
           </select>
         </div>
 
-        {/* วันที่จาก */}
+        {/* วันที่ */}
         <div>
           <label className="mb-1 block text-xs font-medium text-zinc-700 dark:text-zinc-300">
-            วันที่จาก
+            วันที่
           </label>
           <input
             type="date"
-            value={filters.dateFrom}
-            onChange={(e) => handleFilterChange("dateFrom", e.target.value)}
-            className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
-          />
-        </div>
-
-        {/* วันที่ถึง */}
-        <div>
-          <label className="mb-1 block text-xs font-medium text-zinc-700 dark:text-zinc-300">
-            วันที่ถึง
-          </label>
-          <input
-            type="date"
-            value={filters.dateTo}
-            onChange={(e) => handleFilterChange("dateTo", e.target.value)}
+            value={filters.date}
+            onChange={(e) => handleFilterChange("date", e.target.value)}
             className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
           />
         </div>
