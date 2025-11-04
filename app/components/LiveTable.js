@@ -8,7 +8,7 @@ import {
   formatDurationWithRounding,
 } from "../lib/data";
 
-export default function LiveTable({ records, onEdit, onDelete }) {
+export default function LiveTable({ records, onEdit, onDelete, profileId }) {
   if (records.length === 0) {
     return (
       <div className="mt-8 rounded-lg border border-zinc-200 bg-white p-12 text-center dark:border-zinc-800 dark:bg-zinc-900">
@@ -77,7 +77,7 @@ export default function LiveTable({ records, onEdit, onDelete }) {
         <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
           {records.map((record, index) => (
             <tr
-              key={record.id}
+              key={`${profileId || 'no-profile'}-${record.id}-${index}`}
               className={`transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/50 ${
                 index % 2 === 0
                   ? "bg-white dark:bg-zinc-900"

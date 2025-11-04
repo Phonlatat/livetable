@@ -13,6 +13,8 @@ import {
   deleteLiveRecord,
   deleteAllLiveRecords,
   getCurrentProfile,
+  setCurrentProfile,
+  getAllProfiles,
   getProfileStats,
 } from "./lib/data";
 
@@ -61,6 +63,7 @@ export default function Home() {
   useEffect(() => {
     // ใช้ setTimeout เพื่อหลีกเลี่ยง cascading renders
     const timer = setTimeout(() => {
+      // ใช้ currentProfileId ที่ตั้งค่าไว้โดยตรง ไม่ต้องใช้ getCurrentProfile()
       const data = getAllLiveRecords(currentProfileId);
       const sorted = data.sort((a, b) => {
         const dateA = a.date ? new Date(a.date) : new Date(0);
@@ -69,21 +72,35 @@ export default function Home() {
       });
       setRecords(sorted);
 
-      const profile = currentProfileId ? getCurrentProfile() : null;
-      setCurrentProfile(profile);
+      // อ่านโปรไฟล์จาก getAllProfiles โดยใช้ currentProfileId
+      if (currentProfileId) {
+        const profiles = getAllProfiles();
+        const profile = profiles.find((p) => p.id === currentProfileId);
+        setCurrentProfile(profile);
+      } else {
+        setCurrentProfile(null);
+      }
     }, 0);
 
     return () => clearTimeout(timer);
   }, [currentProfileId]);
 
   const handleProfileChange = useCallback((profileId) => {
-    setCurrentProfileId(profileId);
+    // ตั้งค่า current profile ใน localStorage ก่อน
     if (profileId) {
-      const profile = getCurrentProfile();
+      setCurrentProfile(profileId);
+    }
+    
+    setCurrentProfileId(profileId);
+    
+    if (profileId) {
+      const profiles = getAllProfiles();
+      const profile = profiles.find((p) => p.id === profileId);
       setCurrentProfile(profile);
     } else {
       setCurrentProfile(null);
     }
+    
     // Reset filters เมื่อเปลี่ยนโปรไฟล์
     setFilters({
       streamerName: "",
@@ -125,17 +142,18 @@ export default function Home() {
   };
 
   const handleImportComplete = useCallback((importedProfileId = null) => {
-    // ถ้ามี importedProfileId และไม่ตรงกับ currentProfileId ให้เปลี่ยนโปรไฟล์ก่อน
+    // ใช้ profileId ที่ import จริงๆ (อาจต่างจาก currentProfileId)
+    const targetProfileId = importedProfileId || currentProfileId;
+    
+    // ตั้งค่า current profile ใน localStorage
+    if (targetProfileId) {
+      setCurrentProfile(targetProfileId);
+    }
+    
+    // ถ้า import ในโปรไฟล์อื่น ให้เปลี่ยนโปรไฟล์
     if (importedProfileId && importedProfileId !== currentProfileId) {
       setCurrentProfileId(importedProfileId);
-      // โหลดข้อมูลของโปรไฟล์ที่ import
-      const data = getAllLiveRecords(importedProfileId);
-      const sorted = data.sort((a, b) => {
-        const dateA = a.date ? new Date(a.date) : new Date(0);
-        const dateB = b.date ? new Date(b.date) : new Date(0);
-        return dateA - dateB;
-      });
-      setRecords(sorted);
+      // useEffect จะโหลดข้อมูลอัตโนมัติเมื่อ currentProfileId เปลี่ยน
     } else {
       // โหลดข้อมูลใหม่ของโปรไฟล์ปัจจุบัน
       loadRecords();
@@ -379,7 +397,11 @@ export default function Home() {
 
         {/* Filter Bar */}
         {currentProfileId && records.length > 0 && (
-          <FilterBar records={records} onFilterChange={handleFilterChange} />
+          <FilterBar
+            key={`filter-profile-${currentProfileId}`}
+            records={records}
+            onFilterChange={handleFilterChange}
+          />
         )}
 
         {/* Stats Summary */}
@@ -448,10 +470,11 @@ export default function Home() {
         {/* Table */}
         {currentProfileId ? (
           <LiveTable
-            key={`table-${currentProfileId}-${filteredRecords.length}-${filters.streamerName || 'all'}-${filters.platform || 'all'}-${filters.date || 'all'}-${filters.search || 'all'}`}
+            key={`table-profile-${currentProfileId}`}
             records={filteredRecords}
             onEdit={handleEdit}
             onDelete={handleDelete}
+            profileId={currentProfileId}
           />
         ) : (
           <div className="mt-8 rounded-lg border border-zinc-200 bg-white p-12 text-center dark:border-zinc-800 dark:bg-zinc-900">
